@@ -14,6 +14,11 @@ int main(int argc, char *argv[]) {
   }
   // Collect all the parameters given as input
   command_line_parser(argc, argv);
+  freq_vector = freq_vector_creation(freq_threshold);
+  kmers_vector = generic_vector_creation(kmers);
+  distance_vector = generic_vector_creation(dist);
+  check_input_param();
+
   //If multifasta is not provided the input file is BED file and twobit file 
   //is opened, otherwise if the input is multifasta the tb variable has value 0
   (MFASTA_FILE.empty()) ? tb = twobit_open(TWOBIT_FILE.c_str()) : tb = 0;
@@ -78,16 +83,37 @@ int main(int argc, char *argv[]) {
   MapClass M(B.bed_v);
   //For each kmer
   for (unsigned int i = 0; i < kmers_vector.size(); i++) {
+    double progress = 0;
+    int bar = 0;
     vector<PvalueClass> P_vector;
     vector<string> seed_oligo;
+    double increm = double(1)/double(len[i]);
     //For each position in the sequence
     for (unsigned int j = 0; j < len[i]; j++) {
+      int barWidth = 70;
+      cout << "[";
+      int pos = barWidth * progress;
+      for (int i = 0; i < barWidth; ++i) {
+        if (i < pos) cout << "=";
+        else if (i == pos) cout << ">";
+        else cout << " ";
+      }
+      bar = int(progress * 100);
+      if(bar > 97){
+        bar = 100;
+      }
+      cout << "] " << bar << " %\r";
+      cout.flush();
+      
+      
+      progress += increm;
+
       double Pval = 0;
       unsigned int counter = 0;
       // Loop for eventually other matrixes that are hidden by the best motif
       while(counter < max_matrix) {
 
-        cout << "Position: " << j << endl;
+        // cout << "Position: " << j << endl;
           
         //For each oligo present in the vertical map
         for (multimap<int, string>::iterator it =
@@ -148,6 +174,7 @@ int main(int argc, char *argv[]) {
     Outfile_PWM_matrixes(i, seed_oligo);
     Outfile_Z_score_values(i, seed_oligo);
     seed_oligo.clear();
+    cout << endl;
   }
   RAM_usage();
   return 0;
@@ -1280,6 +1307,21 @@ vector<double> freq_vector_creation(string numbers){
     }
   }
 }
+
+void check_input_param(){
+  if(kmers_vector.size() != freq_vector.size()){
+    cerr << endl 
+      << "ERROR! The number of kmers must be equal to the number of hamming distances and frequencies" << endl << endl;
+    exit(1);
+  }
+        
+  if(kmers_vector.size() != distance_vector.size()){
+    cerr << endl 
+      << "ERROR! The number of kmers must be equal to the number of hamming distances and frequencies" << endl << endl;
+    exit(1);
+  }
+}
+
 //Function to monitor RAM usage by MocoLoco
 void RAM_usage() {
   int who = RUSAGE_SELF;
@@ -1548,8 +1590,8 @@ void print_debug_Z_scores(ofstream &outfile, unsigned int j,
   string best_oligo;
 
   outfile << "#Position\tbest_oligo\tLocal_mean\tGlobal_mean\tLocal_std_dev"
-          << "\tGlobal_std_dev\tZ_score\tP-value\tP-value_Log10"
-          << "\tBonferroni P-value\tBonferroni_Log10\tFrequence\n";
+          << "\tGlobal_std_dev\tZ_score\tP_value\tP_value_Log10"
+          << "\tBonferroni_P_value\tBonferroni_Log10\tFrequence\n";
 
   for (unsigned int position = 0; position < Z_TEST_MATRIX[j].size();
        position++) {
@@ -1670,7 +1712,7 @@ void command_line_parser(int argc, char **argv) {
     case 'k':
       kmers.clear();
       kmers = string(optarg);
-      kmers_vector = generic_vector_creation(kmers);
+      
       break;
     case 'l':
       tomtom = true;
@@ -1684,22 +1726,10 @@ void command_line_parser(int argc, char **argv) {
     case 'f':
       freq_threshold.clear();
       freq_threshold = string(optarg);
-      freq_vector = freq_vector_creation(freq_threshold);
-      if(kmers_vector.size() != freq_vector.size()){
-        cerr << endl 
-            << "ERROR! The number of kmers must be equal to the number of hamming distances and frequencies" << endl << endl;
-        exit(1);
-      }
       break;
     case 'd':
       dist.clear();
       dist = string(optarg);
-      distance_vector = generic_vector_creation(dist);
-      if(kmers_vector.size() != distance_vector.size()){
-    cerr << endl 
-      << "ERROR! The number of kmers must be equal to the number of hamming distances and frequencies" << endl << endl;
-    exit(1);
-  }
       break;
     case 's':
       DS = false;

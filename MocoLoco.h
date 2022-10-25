@@ -443,5 +443,6 @@ void command_line_parser(int, char **);
 void display_help();
 bool is_file_exist(string fileName, string buf);
 void check_input_file();
+void check_input_param();
 vector<unsigned int> generic_vector_creation(string);
 vector<double> freq_vector_creation(string);
