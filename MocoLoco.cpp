@@ -80,9 +80,11 @@ int main(int argc, char *argv[]) {
     len.emplace_back(B.bed_v[0].Sequence.size() - kmers_vector[i] + 1);
   }
   //In MapClass all the maps used for the tool are created, we have horizontal and vertical maps
+  cout << "Creating horizontal and vertical maps...\n\n";
   MapClass M(B.bed_v);
   //For each kmer
   for (unsigned int i = 0; i < kmers_vector.size(); i++) {
+    cout << "Analysis k " << kmers_vector[i] << " with hamming distance " << distance_vector[i] << endl << endl;
     double progress = 0;
     int bar = 0;
     vector<PvalueClass> P_vector;
@@ -99,22 +101,17 @@ int main(int argc, char *argv[]) {
         else cout << " ";
       }
       bar = int(progress * 100);
-      if(bar > 97){
+      if(bar >= 97){
         bar = 100;
       }
       cout << "] " << bar << " %\r";
-      cout.flush();
-      
-      
+      cout.flush();    
       progress += increm;
 
       double Pval = 0;
       unsigned int counter = 0;
       // Loop for eventually other matrixes that are hidden by the best motif
-      while(counter < max_matrix) {
-
-        // cout << "Position: " << j << endl;
-          
+      while(counter < max_matrix) {      
         //For each oligo present in the vertical map
         for (multimap<int, string>::iterator it =
         M.vector_positions_occurrences[i][j].begin();
@@ -172,9 +169,11 @@ int main(int argc, char *argv[]) {
 
     //Outfile functions 
     Outfile_PWM_matrixes(i, seed_oligo);
+    cout << "\n\nPWM matrixes output file created\n\n";
     Outfile_Z_score_values(i, seed_oligo);
+    cout << "Z_scores output file created";
     seed_oligo.clear();
-    cout << endl;
+    cout << "\n\n";
   }
   RAM_usage();
   return 0;
@@ -505,6 +504,7 @@ void ReverseString(string bases, string &reverse_bases) {
 void MapClass::MainMapVector(vector<BedClass::bed_s> &GEP) {
   // PROFILE_FUNCTION();
   for (unsigned int i = 0; i < kmers_vector.size(); i++) {
+    cout << "Maps for k " << kmers_vector[i] << "...";
     for (unsigned int j = 0; j < GEP.size(); j++) {
       CountOccurrencesHor(GEP[j].Sequence, kmers_vector[i]);
       CountOccurrencesVer(GEP[j].Sequence, kmers_vector[i]);
@@ -513,7 +513,9 @@ void MapClass::MainMapVector(vector<BedClass::bed_s> &GEP) {
     horizontal_map.clear();
     vector_map_ver.push_back(vertical_map);
     vertical_map.clear();
+    cout << " OK\n";
   }
+  cout << endl;
 }
 
 void MapClass::CountOccurrencesHor(string &sequence, unsigned int k) {
@@ -1201,7 +1203,7 @@ void ClearingGEP(vector<BedClass::bed_s> &GEP, vector<double> &ScoreVector){
     string sampleStr = GEP[i].Chromosome + "\t" + to_string(GEP[i].Start);
     //If the score of the sequence is higher than the threshold the BedClass structure is loaded in the new vector
     if(ScoreVector[i] < Comparison ||  s.find(sampleStr) != s.end()){
-      cerr << "The sequence " << i + 1 << " is not taken into account because it is a duplicate or it has low score \n\n"; 
+      cerr << "The sequence " << i + 1 << " is not taken into account because it is a duplicate or it has low score \n"; 
       count += 1;
     }
     else{
@@ -1328,7 +1330,7 @@ void RAM_usage() {
   struct rusage usage;
   int ret;
   ret = getrusage(who, &usage);
-  cout << ret << endl;
+
   cout << endl
        << "Maximum resident set size: " << usage.ru_maxrss / 1000 << " Mb"
        << endl
@@ -1824,6 +1826,6 @@ void display_help() {
   cerr << "\n --secondary_matrixes || -r parameter for secondary matrixes \n\n";
   cerr << "\n --z_pval_threshold || -z parameter to set a threshold for the PWM's "
           "Z_pvalue (DEFAULT: 1)\n\n";
-  cerr << "\n --cleaning || -a if enabled the tool doesn't clear sequences with bad scores (DEFAULT: disabled) \n\n";
+  cerr << "\n --cleaning || -a if enabled the tool doesn't clear sequences with low scores (the threshold is given by the mean minus two times the standard deviation of the best scores for all the sequences) (DEFAULT: disabled) \n\n";
   exit(EXIT_SUCCESS);
 }
