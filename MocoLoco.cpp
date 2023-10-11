@@ -14,10 +14,6 @@ int main(int argc, char *argv[]) {
   }
   // Collect all the parameters given as input
   command_line_parser(argc, argv);
-  freq_vector = freq_vector_creation(freq_threshold);
-  kmers_vector = generic_vector_creation(kmers);
-  distance_vector = generic_vector_creation(dist);
-  check_input_param();
 
   //If multifasta is not provided the input file is BED file and twobit file 
   //is opened, otherwise if the input is multifasta the tb variable has value 0
@@ -80,38 +76,20 @@ int main(int argc, char *argv[]) {
     len.emplace_back(B.bed_v[0].Sequence.size() - kmers_vector[i] + 1);
   }
   //In MapClass all the maps used for the tool are created, we have horizontal and vertical maps
-  cout << "Creating horizontal and vertical maps...\n\n";
   MapClass M(B.bed_v);
   //For each kmer
   for (unsigned int i = 0; i < kmers_vector.size(); i++) {
-    cout << "Analysis k " << kmers_vector[i] << " with hamming distance " << distance_vector[i] << endl << endl;
-    double progress = 0;
-    int bar = 0;
     vector<PvalueClass> P_vector;
     vector<string> seed_oligo;
-    double increm = double(1)/double(len[i]);
     //For each position in the sequence
     for (unsigned int j = 0; j < len[i]; j++) {
-      int barWidth = 70;
-      cout << "[";
-      int pos = barWidth * progress;
-      for (int i = 0; i < barWidth; ++i) {
-        if (i < pos) cout << "=";
-        else if (i == pos) cout << ">";
-        else cout << " ";
-      }
-      bar = int(progress * 100);
-      if(bar >= 97){
-        bar = 100;
-      }
-      cout << "] " << bar << " %\r";
-      cout.flush();    
-      progress += increm;
-
       double Pval = 0;
       unsigned int counter = 0;
       // Loop for eventually other matrixes that are hidden by the best motif
-      while(counter < max_matrix) {      
+      while(counter < max_matrix) {
+
+        cout << "Position: " << j << endl;
+          
         //For each oligo present in the vertical map
         for (multimap<int, string>::iterator it =
         M.vector_positions_occurrences[i][j].begin();
@@ -128,9 +106,7 @@ int main(int argc, char *argv[]) {
 
         // Debug for PValueClass
         // DVector(P_vector, j);
-        if(max_matrix > P_vector.size()){
-          max_matrix = P_vector.size();
-        }
+          
         //Creation of clusters of oligos at hamming distance
         //and creation of PWM for each position
         HammingClass H(P_vector[0].oligo,
@@ -169,16 +145,13 @@ int main(int argc, char *argv[]) {
 
     //Outfile functions 
     Outfile_PWM_matrixes(i, seed_oligo);
-    cout << "\n\nPWM matrixes output file created\n\n";
     Outfile_Z_score_values(i, seed_oligo);
-    cout << "Z_scores output file created";
     seed_oligo.clear();
-    cout << "\n\n";
   }
   RAM_usage();
   return 0;
-//  }
-//    Instrumentor::Get().EndSession();
+// }
+//   Instrumentor::Get().EndSession();
 }
 
 //This function read Bed or Multifasta file in input and create the BedClass
@@ -197,20 +170,20 @@ void BedClass::ReadBed(string BED_FILE, string MFASTA_FILE, TwoBit *tb) {
       //into different variables and similarly files can be stream into strings
       istringstream mystream(line);
       bed_s bed_in;
-      mystream >> bed_in.Chromosome >> bed_in.Start >> bed_in.End;
-      if (bed_in.Start > bed_in.End) {
-        cerr << "Error, start coordinate is higher than end coordinate\n\n";
-      } 
-      else {
-        int center = (bed_in.Start + bed_in.End) / 2;
-        bed_in.Start = center - half_length;
-        bed_in.End = center + half_length + overhead;
-        bed_in.Sequence =
+        mystream >> bed_in.Chromosome >> bed_in.Start >> bed_in.End;
+        if (bed_in.Start > bed_in.End) {
+          cout << "error " << endl;
+        } 
+        else {
+          int center = (bed_in.Start + bed_in.End) / 2;
+          bed_in.Start = center - half_length;
+          bed_in.End = center + half_length + overhead;
+          bed_in.Sequence =
             twobit_sequence(tb, bed_in.Chromosome.c_str(), bed_in.Start, 
                             bed_in.End - 1);
 
-        bed_v.push_back(bed_in);
-      }
+          bed_v.push_back(bed_in);
+        }
     }
   }
   else{
@@ -413,7 +386,6 @@ void MatrixClass::InversemLogMatrix() {
 }
 
 unsigned int ScoreClass::BestScore(vector<double> &ScoreVector){
-  // PROFILE_FUNCTION();
   //The MaxScore for the vector with all scores is stored
   MaxScore = *max_element(ScoreVector.begin(), ScoreVector.end());
   int match = -25;
@@ -504,7 +476,6 @@ void ReverseString(string bases, string &reverse_bases) {
 void MapClass::MainMapVector(vector<BedClass::bed_s> &GEP) {
   // PROFILE_FUNCTION();
   for (unsigned int i = 0; i < kmers_vector.size(); i++) {
-    cout << "Maps for k " << kmers_vector[i] << "...";
     for (unsigned int j = 0; j < GEP.size(); j++) {
       CountOccurrencesHor(GEP[j].Sequence, kmers_vector[i]);
       CountOccurrencesVer(GEP[j].Sequence, kmers_vector[i]);
@@ -513,9 +484,7 @@ void MapClass::MainMapVector(vector<BedClass::bed_s> &GEP) {
     horizontal_map.clear();
     vector_map_ver.push_back(vertical_map);
     vertical_map.clear();
-    cout << " OK\n";
   }
-  cout << endl;
 }
 
 void MapClass::CountOccurrencesHor(string &sequence, unsigned int k) {
@@ -1183,7 +1152,6 @@ void EMClass::EM_cycle(map<string,double> &cluster_map,
 //This function clear sequences with low primary motif score 
 void ClearingGEP(vector<BedClass::bed_s> &GEP, vector<double> &ScoreVector){
   int count = 0;
-  unordered_set<string> s;
   //Copy of GEP to keep just the sequences with good scores
   vector<BedClass::bed_s> ClearedGEP;
   //Calculation of standard deviation
@@ -1200,15 +1168,13 @@ void ClearingGEP(vector<BedClass::bed_s> &GEP, vector<double> &ScoreVector){
   double Comparison = Mean - (2 * StdDev);
   //For each sequence
   for (unsigned int i = 0; i < GEP.size(); i++){
-    string sampleStr = GEP[i].Chromosome + "\t" + to_string(GEP[i].Start);
     //If the score of the sequence is higher than the threshold the BedClass structure is loaded in the new vector
-    if(ScoreVector[i] < Comparison ||  s.find(sampleStr) != s.end()){
-      cerr << "The sequence " << i + 1 << " is not taken into account because it is a duplicate or it has low score \n"; 
-      count += 1;
+    if(ScoreVector[i] > Comparison){
+      ClearedGEP.emplace_back(GEP[i]);
     }
     else{
-      s.insert(sampleStr);
-      ClearedGEP.emplace_back(GEP[i]);
+      cerr << "The sequence " << i + 1 << " is not taken into account because low score \n\n"; 
+      count += 1;
     }
   }
   cerr << count << " sequences are eliminated \n\n";
@@ -1278,11 +1244,11 @@ vector<double> freq_vector_creation(string numbers){
     index = numbers.find(",");
     double freq = stod(numbers.substr(0, index));
      if (freq == 0) {
-      cout << "WARNING: frequence threshold 0 inserted\n";
+      cout << "WARNING: frequency threshold 0 inserted\n";
     }
 
     if (freq < 0 || freq >= 1) {
-      cerr << "ERROR: please insert a frequence treshold between 0 and "
+      cerr << "ERROR: please insert a frequency treshold between 0 and "
               "1.\n\n\n";
       display_help();
       exit(1);
@@ -1298,39 +1264,24 @@ vector<double> freq_vector_creation(string numbers){
   
   for(unsigned int i = 0; i < freq_vector.size(); i++){
     if (freq_vector[i] == 0) {
-      cout << "WARNING: frequence threshold 0 inserted\n";
+      cout << "WARNING: frequency threshold 0 inserted\n";
     }
 
     if (freq_vector[i] < 0 || freq_vector[i] >= 1) {
-      cerr << "ERROR: please insert a frequence treshold between 0 and "
+      cerr << "ERROR: please insert a frequency treshold between 0 and "
               "1.\n\n\n";
       display_help();
       exit(1);
     }
   }
 }
-
-void check_input_param(){
-  if(kmers_vector.size() != freq_vector.size()){
-    cerr << endl 
-      << "ERROR! The number of kmers must be equal to the number of hamming distances and frequencies" << endl << endl;
-    exit(1);
-  }
-        
-  if(kmers_vector.size() != distance_vector.size()){
-    cerr << endl 
-      << "ERROR! The number of kmers must be equal to the number of hamming distances and frequencies" << endl << endl;
-    exit(1);
-  }
-}
-
 //Function to monitor RAM usage by MocoLoco
 void RAM_usage() {
   int who = RUSAGE_SELF;
   struct rusage usage;
   int ret;
   ret = getrusage(who, &usage);
-
+  cout << ret << endl;
   cout << endl
        << "Maximum resident set size: " << usage.ru_maxrss / 1000 << " Mb"
        << endl
@@ -1592,8 +1543,8 @@ void print_debug_Z_scores(ofstream &outfile, unsigned int j,
   string best_oligo;
 
   outfile << "#Position\tbest_oligo\tLocal_mean\tGlobal_mean\tLocal_std_dev"
-          << "\tGlobal_std_dev\tZ_score\tP_value\tP_value_Log10"
-          << "\tBonferroni_P_value\tBonferroni_Log10\tFrequence\n";
+          << "\tGlobal_std_dev\tZ_score\tP-value\tP-value_Log10"
+          << "\tBonferroni P-value\tBonferroni_Log10\n";
 
   for (unsigned int position = 0; position < Z_TEST_MATRIX[j].size();
        position++) {
@@ -1611,8 +1562,7 @@ void print_debug_Z_scores(ofstream &outfile, unsigned int j,
             << Z_TEST_MATRIX[j][position].z_score << "\t"
             << Z_TEST_MATRIX[j][position].Zpvalue << "\t" << Zpvalue_Log10
             << "\t" << Z_TEST_MATRIX[j][position].Zpvalue_bonf << "\t" 
-            << bonferroni_Log10 << "\t"
-            << H_HAMMING_MATRIX[j][position].freq1 << endl;
+            << bonferroni_Log10 << endl;
   }
 }
 
@@ -1714,7 +1664,7 @@ void command_line_parser(int argc, char **argv) {
     case 'k':
       kmers.clear();
       kmers = string(optarg);
-      
+      kmers_vector = generic_vector_creation(kmers);
       break;
     case 'l':
       tomtom = true;
@@ -1728,10 +1678,22 @@ void command_line_parser(int argc, char **argv) {
     case 'f':
       freq_threshold.clear();
       freq_threshold = string(optarg);
+      freq_vector = freq_vector_creation(freq_threshold);
+      if(kmers_vector.size() != freq_vector.size()){
+        cerr << endl 
+            << "ERROR! The number of kmers must be equal to the number of hamming distances and frequencies" << endl << endl;
+        exit(1);
+      }
       break;
     case 'd':
       dist.clear();
       dist = string(optarg);
+      distance_vector = generic_vector_creation(dist);
+      if(kmers_vector.size() != distance_vector.size()){
+    cerr << endl 
+      << "ERROR! The number of kmers must be equal to the number of hamming distances and frequencies" << endl << endl;
+    exit(1);
+  }
       break;
     case 's':
       DS = false;
@@ -1826,6 +1788,6 @@ void display_help() {
   cerr << "\n --secondary_matrixes || -r parameter for secondary matrixes \n\n";
   cerr << "\n --z_pval_threshold || -z parameter to set a threshold for the PWM's "
           "Z_pvalue (DEFAULT: 1)\n\n";
-  cerr << "\n --cleaning || -a if enabled the tool doesn't clear sequences with low scores (the threshold is given by the mean minus two times the standard deviation of the best scores for all the sequences) (DEFAULT: disabled) \n\n";
+  cerr << "\n --cleaning || -a if enabled the tool doesn't clear sequences with bad scores (DEFAULT: disabled) \n\n";
   exit(EXIT_SUCCESS);
 }

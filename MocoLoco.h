@@ -21,7 +21,6 @@
 #include <typeinfo>
 #include <unordered_map>
 #include <vector>
-#include <unordered_set>
 
 using namespace std;
 
@@ -59,9 +58,13 @@ string ordering;
 bool DS = true;
 string kmers = "6,8,10";
 string dist = "1,2,3";
+unsigned int top_N = 10;
 string freq_threshold = "0.006, 0.004, 0.003";
+bool local_maxima_grouping = false;
+bool refining_matrix = false;
 string exp_max;
 bool tomtom = false;
+bool err = false;
 bool direction = false;
 double z_pval_threshold = 1;
 unsigned int max_matrix = 1;
@@ -443,6 +446,5 @@ void command_line_parser(int, char **);
 void display_help();
 bool is_file_exist(string fileName, string buf);
 void check_input_file();
-void check_input_param();
 vector<unsigned int> generic_vector_creation(string);
 vector<double> freq_vector_creation(string);
