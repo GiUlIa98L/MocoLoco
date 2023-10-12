@@ -1,0 +1,37 @@
+ #This line avoid the use of scientific notation in the plot
+options(scipen = 999)
+
+options(ggrepel.max.overlaps = 3)
+#Calling the libraries
+library("ggplot2")
+library("ggrepel")
+
+#Reading in input the file
+args <- commandArgs(trailingOnly = TRUE)
+
+#From the file it is created the data frame
+data <- read.table(args[1], sep = "\t", header = F)
+
+p1 <- ggplot(data, aes(x = data[, 1], y = data[, 12])) +
+  geom_point() + 
+  #geom_line() +
+  labs(y = "FREQ", x = "POSITION") +
+  geom_text_repel(aes(label = ifelse(data[, 12] > 0.05, data[,1], " "))) +
+  ggtitle("Ets1_MA0098.2_k8_f0.005_Freq") +
+  theme(axis.text = element_text(size = 15), 
+          plot.title = element_text(size = 25))
+
+p2 <- ggplot(data, aes(x = data[, 1], y = data[, 11])) +
+  geom_point() + 
+  #geom_line() +
+  labs(y = "LOG10PVALUE", x = "POSITION") +
+  geom_text_repel(aes(label = ifelse(data[, 11] > 10, data[,1], " "))) +
+  ggtitle("Ets1_MA0098.2_k8_f0.005_Zscore") +
+  theme(axis.text = element_text(size = 15), 
+          plot.title = element_text(size = 25))
+
+ggsave("plot_zscore.png", plot = p2, width = 50,
+        dpi = 320, height = 30, units = "cm")
+
+ggsave("plot_freq.png", plot = p1, width = 50,
+        dpi = 320, height = 30, units = "cm")
